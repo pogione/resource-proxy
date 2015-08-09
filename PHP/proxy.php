@@ -151,6 +151,13 @@ class Proxy {
     public $sessionUrl;
 
     /**
+     * Holds the host url we're redirecting to
+     *
+     * @var string
+     */
+
+    public $hostRedirect='';
+    /**
      * Allowed application urls array is just an array of urls
      *
      * @var array
@@ -246,6 +253,14 @@ class Proxy {
 
             $this->verifyConfiguration();
 
+            if($this->hostRedirect != NULL) {
+
+                $this->proxyUrlWithData = $this->redirect($this->proxyUrlWithData, $this->sessionUrl, $this->hostRedirect);
+
+                $this->proxyUrl = $this->redirect($this->proxyUrl, $this->sessionUrl, $this->hostRedirect);
+
+            }
+
             if ($this->meter->underMeterCap()) {
 
                 $this->runProxy();
@@ -265,6 +280,13 @@ class Proxy {
             $this->configurationParameterError();
 
         }
+
+    }
+
+    public function redirect($sourceUrl, $sessionUrl, $targetUrl)
+    {
+
+        return $targetUrl . substr($sourceUrl, strlen($sessionUrl));
 
     }
 
@@ -716,15 +738,11 @@ class Proxy {
 
             //check with listed serverurl regardless if mustMatch is true or false
             foreach ($this->serverUrls as $key => $value) {
-                
                 $serverUrl = $value['serverurl'][0];
                 $serverUrl['url'] = $this->sanitizeUrl($serverUrl['url']); //Do all the URL cleanups and checks at once
-                
-                if(is_string($serverUrl['matchall'])){
-                    $serverUrl['matchAll'] = strtolower($serverUrl['matchall']);
-                }
+                $serverUrl['matchall'] = strtolower((string) $serverUrl['matchall']);
 
-                if ($serverUrl['matchall'] == true || $serverUrl['matchall'] === "true") {
+                if ( $serverUrl['matchall'] === "true") {
 
                     $urlStartsWith = $this->startsWith($this->proxyUrl, $serverUrl['url']);
 
@@ -734,13 +752,13 @@ class Proxy {
 
                         $this->sessionUrl = $serverUrl['url'];
 
-                        $canProcess = true;
+                        $this->hostRedirect = $s['hostredirect'];
 
-                        return $canProcess;
+                        $canProcess = true;
 
                     }
 
-                } else if ($serverUrl['matchall'] == false || $serverUrl['matchall'] === "false"){
+                } else {
 
                     $isEqual = $this->equals($this->proxyUrl, $serverUrl['url']);
 
@@ -750,11 +768,11 @@ class Proxy {
 
                         $this->sessionUrl = $serverUrl['url'];
 
+                        $this->hostRedirect = $s['hostredirect'];
+
                         $canProcess = true;
-
-                        return $canProcess;
+          
                     }
-
                 }
             }
 
